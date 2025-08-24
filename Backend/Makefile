@@ -24,3 +24,4 @@ clean:
 
 seed:
 	python utils/seed_data.py
+
