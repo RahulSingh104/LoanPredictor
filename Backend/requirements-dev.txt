@@ -1,0 +1,20 @@
+# ML / data science stack
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.1
+scipy==1.13.1
+joblib==1.4.2
+threadpoolctl==3.6.0
+
+# Time/date utilities (already in pandas stack, but keep explicit)
+python-dateutil==2.9.0.post0
+pytz==2025.2
+tzdata==2025.2
+
+# Visualization
+matplotlib==3.9.2
+seaborn==0.13.2
+
+# Jupyter / Colab (optional, only if you want notebooks locally)
+jupyter==1.1.1
+notebook==7.2.2
