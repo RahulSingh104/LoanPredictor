@@ -6,7 +6,7 @@ services:
     branch: main
     rootDir: Backend
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    startCommand: gunicorn Backend.app:app --bind 0.0.0.0:$PORT --workers 3 --timeout 120
     plan: starter
     numInstances: 1
     envVars:
