@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-body {
+/* body {
   font-family: 'Inter', sans-serif;
   scroll-behavior: smooth;
 }
@@ -9,6 +9,44 @@ body {
   background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
   background-size: 400% 400%;
   animation: gradient 15s ease infinite;
+} */
+
+body {
+  font-family: 'Inter', sans-serif;
+  scroll-behavior: smooth;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* prevent horizontal scroll on small screens */
+}
+
+/* Gradient Background */
+.gradient-bg {
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
+  min-height: 100vh; /* full screen */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem; /* padding for mobile */
+  box-sizing: border-box;
+}
+
+/* Responsive text utility */
+.responsive-text {
+  font-size: 1rem; /* base mobile */
+}
+
+@media (min-width: 640px) { /* sm */
+  .responsive-text {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) { /* lg */
+  .responsive-text {
+    font-size: 1.5rem;
+  }
 }
 
 @keyframes gradient {
