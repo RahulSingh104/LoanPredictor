@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: loan-backend
+    runtime: python
+    repo: https://github.com/RahulSingh104/LoanPreditor.git
+    branch: main
+    rootDir: Backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    plan: starter
+    numInstances: 1
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.9.11
