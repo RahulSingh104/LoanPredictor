@@ -71,6 +71,9 @@ app = Flask(__name__)
 allowed_origins = os.environ.get("ALLOWED_ORIGINS", "").split(",")
 CORS(app, resources={r"/*": {"origins": allowed_origins}}, supports_credentials=True)
 
+print("Loaded ALLOWED_ORIGINS:", os.environ.get("ALLOWED_ORIGINS"))
+
+
 
 
 
