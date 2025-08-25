@@ -58,12 +58,21 @@ EXPECTED_FEATURES = [
 model_lock = threading.Lock()
 app = Flask(__name__)
 
-# ✅ Allow frontend React app (both localhost & 127.0.0.1)
-allowed_origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+# # ✅ Allow frontend React app (both localhost & 127.0.0.1)
+# allowed_origins = [
+#     "http://localhost:5173",
+#     "http://127.0.0.1:5173",
+# ]
+# CORS(app, resources={r"/*": {"origins": allowed_origins}}, supports_credentials=True)
+
+
+
+
+allowed_origins = os.environ.get("ALLOWED_ORIGINS", "").split(",")
 CORS(app, resources={r"/*": {"origins": allowed_origins}}, supports_credentials=True)
+
+
+
 
 # ✅ Configure Mongo
 app.config.from_object(Config)
