@@ -248,94 +248,24 @@ def predict():
 def api_predict():
     return predict()
 
-# Loan Routes
-
-
-# @app.route("/api/loan/apply", methods=["POST"])
-# def loan_apply():
-#     auth, resp, code = require_auth()
-#     if resp:
-#         return resp, code
-#     payload = request.get_json(silent=True) or {}
-#     doc = {
-#         "user_id": auth["user_id"],
-#         "loan_amount": float(payload.get("loan_amount", 0)),
-#         "income_annum": float(payload.get("income_annum", 0)),
-#         "cibil_score": float(payload.get("cibil_score", 0)),
-#         "status": payload.get("status", "Pending"),
-#         "created_at": payload.get("created_at") or datetime.utcnow().isoformat() + "Z",
-#         "raw": payload.get("raw") or None
-#     }
-#     mongo.db.loans.insert_one(doc)
-#     return jsonify({"ok": True, "loan": doc}), 201
-
+# === Loan Routes =================================================
 @app.route("/api/loan/apply", methods=["POST"])
 def loan_apply():
     auth, resp, code = require_auth()
     if resp:
         return resp, code
-
     payload = request.get_json(silent=True) or {}
-
-    # --- Run prediction using same logic as /api/predict ---
-    try:
-        no_of_dependents = float(payload.get("no_of_dependents", 0))
-        education = payload.get("education", "Graduate")
-        self_employed = payload.get("self_employed", "No")
-        income_annum = float(payload.get("income_annum", 0))
-        loan_amount = float(payload.get("loan_amount", 0))
-        loan_term = float(payload.get("loan_term", 0))
-        cibil_score = float(payload.get("cibil_score", 0))
-        residential_assets = float(payload.get("residential_assets_value", 0))
-        commercial_assets = float(payload.get("commercial_assets_value", 0))
-        luxury_assets = float(payload.get("luxury_assets_value", 0))
-        bank_assets = float(payload.get("bank_asset_value", 0))
-
-        debt_to_income = loan_amount / income_annum if income_annum > 0 else 0
-        loan_to_income = loan_amount / income_annum if income_annum > 0 else 0
-        asset_coverage = (
-            residential_assets + commercial_assets + luxury_assets + bank_assets
-        ) / loan_amount if loan_amount > 0 else 0
-
-        input_df = pd.DataFrame([{
-            "education": education,
-            "self_employed": self_employed,
-            "no_of_dependents": no_of_dependents,
-            "income_annum": income_annum,
-            "loan_amount": loan_amount,
-            "loan_term": loan_term,
-            "cibil_score": cibil_score,
-            "residential_assets_value": residential_assets,
-            "commercial_assets_value": commercial_assets,
-            "luxury_assets_value": luxury_assets,
-            "bank_asset_value": bank_assets,
-            "debt_to_income": debt_to_income,
-            "asset_coverage": asset_coverage,
-            "loan_to_income": loan_to_income
-        }])
-
-        raw_prediction = model.predict(input_df)[0]
-        status = "Approved" if raw_prediction == 1 else "Rejected"
-
-    except Exception as e:
-        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
-
-    # --- Save loan with prediction result ---
     doc = {
         "user_id": auth["user_id"],
-        "loan_amount": loan_amount,
-        "income_annum": income_annum,
-        "cibil_score": cibil_score,
-        "status": status,
-        "created_at": datetime.utcnow().isoformat() + "Z",
-        "raw": payload
+        "loan_amount": float(payload.get("loan_amount", 0)),
+        "income_annum": float(payload.get("income_annum", 0)),
+        "cibil_score": float(payload.get("cibil_score", 0)),
+        "status": payload.get("status", "Pending"),
+        "created_at": payload.get("created_at") or datetime.utcnow().isoformat() + "Z",
+        "raw": payload.get("raw") or None
     }
     mongo.db.loans.insert_one(doc)
-
-    return jsonify({"ok": True, "loan": doc, "prediction": status}), 201
-
-
-
+    return jsonify({"ok": True, "loan": doc}), 201
 
 @app.route("/api/loan/my", methods=["GET"])
 def loan_my():
@@ -408,4 +338,4 @@ def _server(e):
 # -------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001)) 
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True) 

@@ -4,6 +4,7 @@ import api from "../../utils/api";
 
 export default function Register() {
   const navigate = useNavigate();
+
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -41,23 +42,20 @@ export default function Register() {
     setLoading(true);
     try {
       const payload = { ...form };
+
+      // ✅ Register (no double /api)
       const res = await api.post("/auth/register", payload);
       setMsg({ type: "success", text: res.data?.message || "Registered successfully" });
 
-      // ✅ Auto-login after register
+      // ✅ Auto-login
       try {
         const loginRes = await api.post("/auth/login", {
           email: form.email,
           password: form.password,
         });
-
-        // ✅ Save to localStorage
-        localStorage.setItem("lp_user", JSON.stringify({
-          email: form.email,
-          id: loginRes.data?.user_id || null
-        }));
+        const userObj = { email: form.email, id: loginRes.data?.user_id || null };
+        localStorage.setItem("lp_user", JSON.stringify(userObj));
         localStorage.setItem("token", loginRes.data?.token);
-
         navigate("/", { replace: true });
         return;
       } catch {
@@ -90,8 +88,40 @@ export default function Register() {
           </div>
         )}
 
-        {/* your existing fields unchanged */}
-        {/* ... */}
+        <div>
+          <label className="block text-sm mb-1">Full name</label>
+          <input name="username" value={form.username} onChange={handleChange} className="w-full px-3 py-2 rounded border" />
+          {errors.username && <div className="text-xs text-red-600 mt-1">{errors.username}</div>}
+        </div>
+
+        <div>
+          <label className="block text-sm mb-1">Email</label>
+          <input name="email" type="email" value={form.email} onChange={handleChange} className="w-full px-3 py-2 rounded border" />
+          {errors.email && <div className="text-xs text-red-600 mt-1">{errors.email}</div>}
+        </div>
+
+        <div>
+          <label className="block text-sm mb-1">Password</label>
+          <input name="password" type="password" value={form.password} onChange={handleChange} className="w-full px-3 py-2 rounded border" />
+          {errors.password && <div className="text-xs text-red-600 mt-1">{errors.password}</div>}
+        </div>
+
+        <div>
+          <label className="block text-sm mb-1">Phone (optional)</label>
+          <input name="phone" value={form.phone} onChange={handleChange} className="w-full px-3 py-2 rounded border" />
+        </div>
+
+        <div>
+          <label className="block text-sm mb-1">Occupation (optional)</label>
+          <select name="occupation" value={form.occupation} onChange={handleChange} className="w-full px-3 py-2 rounded border">
+            <option value="">Select occupation</option>
+            <option>Engineer</option>
+            <option>Teacher</option>
+            <option>Doctor</option>
+            <option>Other</option>
+          </select>
+        </div>
+
         <button type="submit" disabled={loading} className="w-full py-2 rounded text-white bg-blue-600 hover:bg-blue-700">
           {loading ? "Creating account..." : "Register"}
         </button>

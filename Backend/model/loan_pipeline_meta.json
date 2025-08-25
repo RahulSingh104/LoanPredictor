@@ -53,6 +53,6 @@
     "asset_coverage",
     "loan_to_income"
   ],
-  "saved_at": "2025-08-24T07:45:30.512417Z",
+  "saved_at": "2025-08-25T11:29:48.647674Z",
   "model_path": "D:\\LoanPredictor\\Backend\\model\\loan_pipeline.pkl"
 }
