@@ -2,34 +2,35 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../context/AuthContext'; // ✅
-import axios from 'axios'; // 👈 add axios
+import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth(); // ✅
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // 👇 Call Flask backend (port 5001)
-      const res = await axios.post("http://127.0.0.1:5001/api/auth/login", {
-  email,
-  password,
-});
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, {
+        email,
+        password,
+      });
 
-      // ✅ Save token + username from backend
+      // ✅ Save token + user in localStorage
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("lp_user", JSON.stringify({
+        username: res.data.username,
+        email: email
+      }));
+
+      // ✅ Also update context
       login(res.data.token, res.data.username);
 
-      localStorage.setItem(
-        'lp_user',
-        JSON.stringify({ username: res.data.username, email })
-      );
-
       toast.success('Login successful!');
-      navigate('/dashboard'); // redirect after login
+      navigate('/dashboard');
     } catch (error) {
       toast.error('Login failed. Please check your credentials.');
       console.error('Login error:', error.response?.data || error.message);
@@ -69,7 +70,7 @@ const Login = () => {
           </button>
         </form>
         <p className="text-sm text-center">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link to="/register" className="font-medium text-indigo-600 hover:underline">
             Register here
           </Link>
