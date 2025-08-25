@@ -7,22 +7,22 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import threading
 import json
-import io
 
 import pandas as pd
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+from flask_jwt_extended import (
+    JWTManager, jwt_required, get_jwt_identity
+)
 
-import jwt  # PyJWT
-
-# ✅ Ensure package imports work
+# Ensure package imports work
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # -------------------------------
 # Load .env from root folder
 # -------------------------------
-ROOT_DIR = Path(__file__).resolve().parent.parent  # D:\LoanPredictor
+ROOT_DIR = Path(__file__).resolve().parent.parent  # e.g., D:\LoanPredictor
 ENV_PATH = ROOT_DIR / ".env"
 if ENV_PATH.exists():
     load_dotenv(ENV_PATH)
@@ -43,8 +43,6 @@ BACKUP_DIR = ROOT_DIR / "Backend" / "model" / "backups"
 META_PATH = ROOT_DIR / "Backend" / "model" / "loan_pipeline_meta.json"
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
-ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "changeme")
-
 EXPECTED_FEATURES = [
     "no_of_dependents", "education", "self_employed",
     "income_annum", "loan_amount", "loan_term", "cibil_score",
@@ -58,35 +56,54 @@ EXPECTED_FEATURES = [
 model_lock = threading.Lock()
 app = Flask(__name__)
 
-# # ✅ Allow frontend React app (both localhost & 127.0.0.1)
-# allowed_origins = [
-#     "http://localhost:5173",
-#     "http://127.0.0.1:5173",
-# ]
-# CORS(app, resources={r"/*": {"origins": allowed_origins}}, supports_credentials=True)
+# CORS
+raw_origins = os.environ.get("ALLOWED_ORIGINS", "").strip()
+if raw_origins:
+    allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+else:
+    allowed_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
+print("Loaded ALLOWED_ORIGINS:", allowed_origins)
 
-
-
-
-allowed_origins = os.environ.get("ALLOWED_ORIGINS", "").split(",")
-CORS(app, resources={r"/*": {"origins": allowed_origins}}, supports_credentials=True)
-
-print("Loaded ALLOWED_ORIGINS:", os.environ.get("ALLOWED_ORIGINS"))
-
-
-
-
-
-# ✅ Configure Mongo
+# Mongo/Config
 app.config.from_object(Config)
 mongo.init_app(app)
 print("🔗 Mongo URI in use:", app.config.get("MONGO_URI"))
 
-# ✅ Register Auth routes
+# JWT (one single source of truth)
+app.config["JWT_SECRET_KEY"] = (
+    os.environ.get("JWT_SECRET")
+    or os.environ.get("JWT_SECRET_KEY")
+    or getattr(Config, "JWT_SECRET", None)
+    or getattr(Config, "JWT_SECRET_KEY", None)
+    or "changeme"
+)
+jwt = JWTManager(app)
+
+# Register blueprints
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
 # -------------------------------
-# Model Helpers
+# JWT error handlers (nice messages instead of 422 mystery)
+# -------------------------------
+@jwt.unauthorized_loader
+def _missing_auth(err_msg):
+    return jsonify({"error": "Missing Authorization header"}), 401
+
+@jwt.invalid_token_loader
+def _invalid_token(err_msg):
+    return jsonify({"error": "Invalid token", "detail": err_msg}), 401
+
+@jwt.expired_token_loader
+def _expired_token(jwt_header, jwt_data):
+    return jsonify({"error": "Token expired"}), 401
+
+@jwt.needs_fresh_token_loader
+def _needs_fresh(jwt_header, jwt_data):
+    return jsonify({"error": "Fresh token required"}), 401
+
+# -------------------------------
+# Model helpers
 # -------------------------------
 def load_pipeline(path=MODEL_PATH):
     with open(path, "rb") as f:
@@ -94,8 +111,8 @@ def load_pipeline(path=MODEL_PATH):
     return pipeline
 
 def save_pipeline_atomic(pipeline, path=MODEL_PATH):
-    tmp_fd, tmp_path = tempfile.mkstemp(suffix=".pkl")
-    os.close(tmp_fd)
+    fd, tmp_path = tempfile.mkstemp(suffix=".pkl")
+    os.close(fd)
     with open(tmp_path, "wb") as f:
         pickle.dump(pipeline, f)
     if path.exists():
@@ -113,7 +130,7 @@ def save_metadata(meta: dict, path=META_PATH):
         app.logger.warning(f"Mongo retrain log failed: {e}")
 
 # -------------------------------
-# Startup: load model if exists
+# Startup
 # -------------------------------
 try:
     model = load_pipeline()
@@ -123,37 +140,6 @@ except Exception as e:
     app.logger.warning("No model loaded at startup: %s", e)
 
 # -------------------------------
-# Auth helpers
-# -------------------------------
-def _extract_token():
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
-        return None
-    return auth.split(" ", 1)[1].strip()
-
-def current_user_claims():
-    """Decodes JWT Bearer token and returns claims."""
-    token = _extract_token()
-    if not token:
-        return None, ("Missing or invalid Authorization header", 401)
-    try:
-        claims = jwt.decode(token, Config.JWT_SECRET, algorithms=["HS256"])
-        return claims, None
-    except jwt.ExpiredSignatureError:
-        return None, ("Token expired", 401)
-    except jwt.InvalidTokenError:
-        return None, ("Invalid token", 401)
-
-def require_auth():
-    claims, err = current_user_claims()
-    if err:
-        return None, jsonify({"error": err[0]}), err[1]
-    user_id = str(claims.get("user_id") or claims.get("_id") or claims.get("id") or "")
-    if not user_id:
-        return None, jsonify({"error": "user_id missing in token"}), 401
-    return {"user_id": user_id, "claims": claims}, None, None
-
-# -------------------------------
 # Routes
 # -------------------------------
 @app.route("/api/health", methods=["GET"])
@@ -161,8 +147,6 @@ def health():
     return jsonify({"ok": True, "model_loaded": model is not None})
 
 # Prediction Routes
-
-
 @app.route("/predict", methods=["POST"])
 def predict():
     global model
@@ -243,20 +227,26 @@ def predict():
     except Exception as e:
         return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
-# ✅ Extra alias for frontend (/api/predict)
+# Extra alias for frontend (/api/predict)
 @app.route("/api/predict", methods=["POST"])
 def api_predict():
     return predict()
 
 # === Loan Routes =================================================
+def _get_user_id_from_jwt():
+    """Simplified: identity is exactly what we set at login/register."""
+    return str(get_jwt_identity() or "")
+
 @app.route("/api/loan/apply", methods=["POST"])
+@jwt_required()
 def loan_apply():
-    auth, resp, code = require_auth()
-    if resp:
-        return resp, code
+    user_id = _get_user_id_from_jwt()
+    if not user_id:
+        return jsonify({"error": "user_id missing in token"}), 401
+
     payload = request.get_json(silent=True) or {}
     doc = {
-        "user_id": auth["user_id"],
+        "user_id": user_id,
         "loan_amount": float(payload.get("loan_amount", 0)),
         "income_annum": float(payload.get("income_annum", 0)),
         "cibil_score": float(payload.get("cibil_score", 0)),
@@ -268,11 +258,13 @@ def loan_apply():
     return jsonify({"ok": True, "loan": doc}), 201
 
 @app.route("/api/loan/my", methods=["GET"])
+@jwt_required()
 def loan_my():
-    auth, resp, code = require_auth()
-    if resp:
-        return resp, code
-    cur = mongo.db.loans.find({"user_id": auth["user_id"]}).sort("created_at", -1)
+    user_id = _get_user_id_from_jwt()
+    if not user_id:
+        return jsonify({"error": "user_id missing in token"}), 401
+
+    cur = mongo.db.loans.find({"user_id": user_id}).sort("created_at", -1)
     loans = []
     for d in cur:
         d["_id"] = str(d["_id"])
@@ -280,11 +272,11 @@ def loan_my():
     return jsonify({"loans": loans})
 
 @app.route("/api/loan/stats", methods=["GET"])
+@jwt_required()
 def loan_stats():
-    auth, resp, code = require_auth()
-    if resp:
-        return resp, code
-    user_id = auth["user_id"]
+    user_id = _get_user_id_from_jwt()
+    if not user_id:
+        return jsonify({"error": "user_id missing in token"}), 401
 
     total = mongo.db.loans.count_documents({"user_id": user_id})
     approved = mongo.db.loans.count_documents({"user_id": user_id, "status": "Approved"})
@@ -301,12 +293,9 @@ def loan_stats():
         "recent_30d": recent
     })
 
-# === Model Logs & Retrain =======================================
 @app.route("/api/model/logs", methods=["GET"])
+@jwt_required()
 def model_logs():
-    auth, resp, code = require_auth()
-    if resp:
-        return resp, code
     cur = mongo.db.retrain_logs.find().sort("saved_at", -1)
     logs = []
     for d in cur:
@@ -337,5 +326,6 @@ def _server(e):
 # Main
 # -------------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5001)) 
-    app.run(host="0.0.0.0", port=5001, debug=True) 
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host="0.0.0.0", port=5001, debug=True)
+

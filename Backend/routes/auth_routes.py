@@ -1,12 +1,9 @@
-# routes/auth_routes.py
 from flask import Blueprint, request, jsonify, session
 from models.user_model import User
-from config import Config
-import jwt
-import datetime
+from flask_jwt_extended import create_access_token
+from datetime import timedelta
 
 auth_bp = Blueprint("auth", __name__)
-
 
 # ---------------------------
 # REGISTER
@@ -20,21 +17,17 @@ def register():
     try:
         user_id = User.create_user(data["username"], data["email"], data["password"])
 
-        # ✅ issue JWT with user_id + username
-        token = jwt.encode(
-            {
-                "user_id": str(user_id),
-                "username": data["username"],
-                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1),
-            },
-            Config.JWT_SECRET,
-            algorithm="HS256",
+        # ✅ identity must be a STRING; add whatever extra you like in additional_claims
+        access_token = create_access_token(
+            identity=str(user_id),
+            additional_claims={"username": data["username"]},
+            expires_delta=timedelta(hours=1),
         )
 
         return jsonify({
             "message": "User registered",
             "user_id": str(user_id),
-            "token": token,
+            "token": access_token,
             "username": data["username"],
         }), 201
 
@@ -44,7 +37,6 @@ def register():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
 
 # ---------------------------
 # LOGIN
@@ -59,21 +51,16 @@ def login():
     if user and User.check_password(user, data["password"]):
         session["user_id"] = str(user["_id"])
 
-        # ✅ include user_id + username in JWT
-        token = jwt.encode(
-            {
-                "user_id": str(user["_id"]),
-                "username": user["username"],
-                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1),
-            },
-            Config.JWT_SECRET,
-            algorithm="HS256",
+        access_token = create_access_token(
+            identity=str(user["_id"]),
+            additional_claims={"username": user["username"]},
+            expires_delta=timedelta(hours=1),
         )
 
         return jsonify({
             "message": "Login successful",
             "user_id": str(user["_id"]),
-            "token": token,
+            "token": access_token,
             "username": user["username"],
         }), 200
 

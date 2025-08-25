@@ -6,4 +6,8 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(),tailwindcss()   
   ],
+  server: {
+    port: 5174,   // 👈 force port
+    strictPort: true, // 👈 if 5174 is busy, it will fail instead of changing
+    },
 })

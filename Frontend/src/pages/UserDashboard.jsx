@@ -39,9 +39,21 @@ const UserDashboard = () => {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Dashboard</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <DashboardCard icon={<BarChart3 className="text-blue-500 w-8 h-8" />} title="Total Loans" value={stats.total} />
-        <DashboardCard icon={<CheckCircle className="text-green-500 w-8 h-8" />} title="Approved Loans" value={stats.approved} />
-        <DashboardCard icon={<User className="text-purple-500 w-8 h-8" />} title="Welcome Back" value={username} />
+        <DashboardCard
+          icon={<BarChart3 className="text-blue-500 w-8 h-8" />}
+          title="Total Loans"
+          value={stats.total}
+        />
+        <DashboardCard
+          icon={<CheckCircle className="text-green-500 w-8 h-8" />}
+          title="Approved Loans"
+          value={stats.approved}
+        />
+        <DashboardCard
+          icon={<User className="text-purple-500 w-8 h-8" />}
+          title="Welcome Back"
+          value={username}
+        />
       </div>
       <UserLoans />
     </div>
