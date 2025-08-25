@@ -38,9 +38,9 @@ from routes.auth_routes import auth_bp
 # -------------------------------
 # Paths & Constants
 # -------------------------------
-MODEL_PATH = ROOT_DIR / "backend" / "model" / "loan_pipeline.pkl"
-BACKUP_DIR = ROOT_DIR / "backend" / "model" / "backups"
-META_PATH = ROOT_DIR / "backend" / "model" / "loan_pipeline_meta.json"
+MODEL_PATH = ROOT_DIR / "Backend" / "model" / "loan_pipeline.pkl"
+BACKUP_DIR = ROOT_DIR / "Backend" / "model" / "backups"
+META_PATH = ROOT_DIR / "Backend" / "model" / "loan_pipeline_meta.json"
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "changeme")
