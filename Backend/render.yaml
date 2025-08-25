@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: loan-backend
+    env: python
+    branch: main
+    buildCommand: |
+      python -m pip install --upgrade pip setuptools wheel
+      pip install -r requirements.txt
+    startCommand: flask run --host 0.0.0.0 --port $PORT
+    plan: starter
+    instanceCount: 1
+    envVars:
+      - key: FLASK_ENV
+        value: production
+    pythonVersion: "3.9.11"

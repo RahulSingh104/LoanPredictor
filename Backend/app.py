@@ -148,7 +148,9 @@ def require_auth():
 def health():
     return jsonify({"ok": True, "model_loaded": model is not None})
 
-=== Prediction Routes ==========================================
+# Prediction Routes
+
+
 @app.route("/predict", methods=["POST"])
 def predict():
     global model
