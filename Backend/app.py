@@ -57,16 +57,31 @@ model_lock = threading.Lock()
 app = Flask(__name__)
 
 # CORS
+# raw_origins = os.environ.get("ALLOWED_ORIGINS", "").strip()
+# if raw_origins:
+#     allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+# else:
+#     allowed_origins = ["http://localhost:5174", "http://127.0.0.1:5174","https://loan-predictor-rho.vercel.app"]
+# # CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
+
+# CORS(app, resources={r"/*": {"origins": allowed_origins}}, supports_credentials=True)
+
+# print("Loaded ALLOWED_ORIGINS:", allowed_origins)
+
 raw_origins = os.environ.get("ALLOWED_ORIGINS", "").strip()
 if raw_origins:
     allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
 else:
-    allowed_origins = ["http://localhost:5174", "http://127.0.0.1:5174"]
-# CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
+    allowed_origins = [
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "https://loan-predictor-rho.vercel.app"  # Add production URL
+    ]
 
-CORS(app, resources={r"/*": {"origins": allowed_origins}}, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
 
 print("Loaded ALLOWED_ORIGINS:", allowed_origins)
+
 
 # Mongo/Config
 app.config.from_object(Config)
